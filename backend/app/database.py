@@ -1,16 +1,17 @@
+import httpx
 from supabase import create_client, Client
+from supabase.lib.client_options import ClientOptions
 from app.config import settings
 
 
 def create_supabase_client() -> Client:
-    """
-    Returns a Supabase client authenticated with the service_role key.
+    options = ClientOptions(
+        postgrest_client_timeout=30,
+        storage_client_timeout=30,
+    )
+    client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY, options=options)
+    client.postgrest.session = httpx.Client(http2=False)
+    return client
 
-    The service key bypasses Row Level Security — use only in backend
-    server contexts, never in client-facing code.
-    """
-    return create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
 
-
-# Module-level singleton so connections are reused across requests
 supabase: Client = create_supabase_client()
