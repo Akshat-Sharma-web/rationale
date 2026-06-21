@@ -9,7 +9,7 @@
  *   Row 2 → Decisions Over Time (60%) + Decisions by Status donut (40%)
  *   Row 3 → Top Tags bar (50%) + Quality Score Trend line (50%)
  */
-import { useState, useEffect, lazy, Suspense } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import {
   BarChart3, CheckCircle2, Star, TrendingUp, AlertCircle,
 } from 'lucide-react'
@@ -22,6 +22,7 @@ import type { AnalyticsSummary } from '../types'
 // react-plotly.js exports a default component that needs Plotly as peer dep.
 // We use plotly.js-dist-min (smaller build) via the factory pattern.
 import createPlotlyComponent from 'react-plotly.js/factory'
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 import Plotly from 'plotly.js-dist-min'
 const Plot = createPlotlyComponent(Plotly as unknown as Parameters<typeof createPlotlyComponent>[0])
 
@@ -31,7 +32,6 @@ const CHART_BG      = '#12121e'
 const PAPER_BG      = '#12121e'
 const GRID_COLOR    = 'rgba(255,255,255,0.06)'
 const FONT_COLOR    = '#9ca3af'
-const TITLE_COLOR   = '#f1f0f5'
 const INDIGO        = '#4f46e5'
 const INDIGO_LIGHT  = '#818cf8'
 
@@ -171,11 +171,12 @@ export function Analytics() {
   })() : null
 
   const byStatus = data ? (() => {
-    const s = data.decisions_by_status
-    const labels = Object.keys(s).filter((k) => (s as Record<string, number>)[k] > 0)
+    // Cast to unknown first to satisfy TS — decisions_by_status keys are known strings
+    const s = data.decisions_by_status as unknown as Record<string, number>
+    const labels = Object.keys(s).filter((k) => s[k] > 0)
     return {
       labels,
-      values: labels.map((k) => (s as Record<string, number>)[k]),
+      values: labels.map((k) => s[k]),
       colors: labels.map((k) => STATUS_COLORS[k] ?? '#6b7280'),
     }
   })() : null
