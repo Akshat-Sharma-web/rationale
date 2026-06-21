@@ -1,4 +1,5 @@
 // @ts-nocheck
+import Plot from 'react-plotly.js'
 /**
  * Analytics Dashboard page.
  *
@@ -21,11 +22,7 @@ import type { AnalyticsSummary } from '../types'
 
 // ── Lazy Plotly (large bundle — split chunk) ──────────────────────────────────
 // react-plotly.js exports a default component that needs Plotly as peer dep.
-// We use plotly.js-dist-min (smaller build) via the factory pattern.
-import createPlotlyComponent from 'react-plotly.js/factory'
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-import Plotly from 'plotly.js-dist-min'
-const Plot = createPlotlyComponent(Plotly as unknown as Parameters<typeof createPlotlyComponent>[0])
 
 // ── Shared chart theme ────────────────────────────────────────────────────────
 
@@ -430,4 +427,5 @@ export function Analytics() {
     </div>
   )
 }
+
 
