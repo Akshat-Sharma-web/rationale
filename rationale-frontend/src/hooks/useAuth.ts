@@ -1,7 +1,9 @@
 import { useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuthStore } from '../store/authStore'
-import type { User } from '../types'
+import { useWorkspaceStore } from '../store/workspaceStore'
+import { apiClient } from '../lib/apiClient'
+import type { User, Workspace } from '../types'
 
 /**
  * Maps a Supabase auth user to our app's User shape.
@@ -11,6 +13,20 @@ function toAppUser(supabaseUser: NonNullable<Parameters<Parameters<typeof supaba
     id: supabaseUser.id,
     email: supabaseUser.email ?? '',
     name: (supabaseUser.user_metadata?.name as string) ?? supabaseUser.email ?? '',
+  }
+}
+
+/**
+ * Fetch workspaces from the API and populate the workspace store.
+ */
+async function syncWorkspaces() {
+  try {
+    const { data } = await apiClient.get<Workspace[]>('/api/v1/workspaces/')
+    if (data && data.length > 0) {
+      useWorkspaceStore.getState().setWorkspaces(data)
+    }
+  } catch (err) {
+    console.warn('Failed to fetch workspaces:', err)
   }
 }
 
@@ -28,8 +44,11 @@ export function useAuth() {
         if (session?.user) {
           setUser(toAppUser(session.user))
           setSession(session)
+          // Fetch and set workspaces whenever user logs in or session refreshes
+          syncWorkspaces()
         } else {
           clearAuth()
+          useWorkspaceStore.getState().clearWorkspaces()
         }
         setLoading(false)
       }
