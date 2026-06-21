@@ -35,7 +35,7 @@ const FONT_COLOR    = '#9ca3af'
 const INDIGO        = '#4f46e5'
 const INDIGO_LIGHT  = '#818cf8'
 
-const baseLayout: Partial<Plotly.Layout> = {
+const baseLayout = {
   paper_bgcolor: PAPER_BG,
   plot_bgcolor:  CHART_BG,
   font:  { family: 'Inter, system-ui, sans-serif', color: FONT_COLOR, size: 12 },
@@ -53,7 +53,7 @@ const baseLayout: Partial<Plotly.Layout> = {
   showlegend: false,
 }
 
-const baseConfig: Partial<Plotly.Config> = {
+const baseConfig = {
   displayModeBar: false,
   responsive:     true,
 }
