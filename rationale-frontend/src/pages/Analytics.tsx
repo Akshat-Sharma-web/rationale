@@ -144,6 +144,9 @@ function EmptyState() {
 
 export function Analytics() {
   const workspace = useWorkspaceStore((s) => s.activeWorkspace)
+  if (!workspace) {
+    return <div className="analytics-page"><TopBar title="Analytics" /></div>
+  }
   const [data, setData]       = useState<AnalyticsSummary | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState<string | null>(null)
@@ -427,5 +430,6 @@ export function Analytics() {
     </div>
   )
 }
+
 
 
