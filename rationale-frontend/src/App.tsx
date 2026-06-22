@@ -9,6 +9,7 @@ import { Login } from './pages/Login'
 import { Signup } from './pages/Signup'
 import { Dashboard } from './pages/Dashboard'
 import { Analytics } from './pages/Analytics'
+import { ErrorBoundary } from './components/ui/ErrorBoundary'
 import { WorkspaceSettings } from './pages/WorkspaceSettings'
 import { NewDecision } from './pages/NewDecision'
 import { DecisionDetail } from './pages/DecisionDetail'
@@ -42,7 +43,7 @@ function AuthGate() {
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
           <Route path="/dashboard"       element={<Dashboard />} />
-          <Route path="/analytics"       element={<Analytics />} />
+          <Route path="/analytics" element={<ErrorBoundary><Analytics /></ErrorBoundary>} />
           <Route path="/settings"        element={<WorkspaceSettings />} />
           <Route path="/decisions/new"                                       element={<NewDecision />} />
           <Route path="/workspaces/:workspaceId/decisions/:decisionId"        element={<DecisionDetail />} />
@@ -78,3 +79,4 @@ function App() {
 }
 
 export default App
+
