@@ -1,9 +1,10 @@
-import { useNavigate } from 'react-router-dom'
+﻿import { useNavigate } from 'react-router-dom'
+import { Pencil } from 'lucide-react'
 import type { Decision } from '../../types'
 
 type DecisionStatus = Decision['status']
 
-const STATUS_META: Record<
+const STATUS_META: Record
   DecisionStatus,
   { label: string; className: string }
 > = {
@@ -36,6 +37,11 @@ export function DecisionCard({ decision, workspaceId }: DecisionCardProps) {
     decision.status !== 'reviewed' &&
     new Date(decision.review_date) < new Date()
 
+  function handleEdit(e: React.MouseEvent) {
+    e.stopPropagation()
+    navigate(`/workspaces/${workspaceId}/decisions/${decision.id}/edit`)
+  }
+
   return (
     <article
       className="decision-card"
@@ -50,7 +56,6 @@ export function DecisionCard({ decision, workspaceId }: DecisionCardProps) {
           navigate(`/workspaces/${workspaceId}/decisions/${decision.id}`)
       }}
     >
-      {/* Header row */}
       <div className="decision-card__header">
         <span className={`badge ${meta.className}`}>{meta.label}</span>
         {isPastDue && (
@@ -58,17 +63,22 @@ export function DecisionCard({ decision, workspaceId }: DecisionCardProps) {
             Past Due
           </span>
         )}
+        <button
+          className="decision-card__edit-btn"
+          onClick={handleEdit}
+          aria-label={`Edit decision: ${decision.title}`}
+          title="Edit decision"
+        >
+          <Pencil size={13} strokeWidth={2} />
+        </button>
       </div>
 
-      {/* Title */}
       <h2 className="decision-card__title">{decision.title}</h2>
 
-      {/* Context preview */}
       {decision.context && (
         <p className="decision-card__context">{decision.context}</p>
       )}
 
-      {/* Tags */}
       {decision.tags.length > 0 && (
         <div className="decision-card__tags">
           {decision.tags.slice(0, 4).map((tag) => (
@@ -82,7 +92,6 @@ export function DecisionCard({ decision, workspaceId }: DecisionCardProps) {
         </div>
       )}
 
-      {/* Footer */}
       <div className="decision-card__footer">
         <span className="decision-card__meta">
           {new Date(decision.created_at).toLocaleDateString(undefined, {

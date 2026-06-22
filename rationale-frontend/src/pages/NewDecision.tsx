@@ -1,16 +1,12 @@
-import { useState, useRef, type KeyboardEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+﻿import { useState, useRef, useEffect, type KeyboardEvent } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import { Plus, Trash2, Check, ChevronRight, ChevronLeft, X } from 'lucide-react'
-import { createDecision } from '../api/decisions'
+import { createDecision, getDecision, updateDecision } from '../api/decisions'
 import { useWorkspaceStore } from '../store/workspaceStore'
 
-// ─────────────────────────────────────────────────────────────
-//  Types
-// ─────────────────────────────────────────────────────────────
-
 interface AlternativeForm {
-  id: string          // local-only key
+  id: string
   title: string
   description: string
   pros: string[]
@@ -19,13 +15,10 @@ interface AlternativeForm {
 }
 
 interface FormState {
-  // Step 1
   title: string
   context: string
   tags: string[]
-  // Step 2
   alternatives: AlternativeForm[]
-  // Step 3
   rationale: string
   stakeholders: string[]
   reviewDate: string
@@ -34,10 +27,6 @@ interface FormState {
 interface StepErrors {
   [key: string]: string
 }
-
-// ─────────────────────────────────────────────────────────────
-//  Helpers
-// ─────────────────────────────────────────────────────────────
 
 function uid() {
   return Math.random().toString(36).slice(2)
@@ -48,10 +37,6 @@ function makeAlt(): AlternativeForm {
 }
 
 const STEP_LABELS = ['The Decision', 'Alternatives', 'Rationale']
-
-// ─────────────────────────────────────────────────────────────
-//  TagInput — multi-value chip input
-// ─────────────────────────────────────────────────────────────
 
 function TagInput({
   id,
@@ -119,10 +104,6 @@ function TagInput({
   )
 }
 
-// ─────────────────────────────────────────────────────────────
-//  InlineListInput — pros / cons inside alternative cards
-// ─────────────────────────────────────────────────────────────
-
 function InlineListInput({
   values,
   onChange,
@@ -176,10 +157,6 @@ function InlineListInput({
     </div>
   )
 }
-
-// ─────────────────────────────────────────────────────────────
-//  AlternativeCard
-// ─────────────────────────────────────────────────────────────
 
 function AlternativeCard({
   alt,
@@ -245,7 +222,7 @@ function AlternativeCard({
           className="form-textarea form-textarea--sm"
           value={alt.description}
           onChange={(e) => set('description', e.target.value)}
-          placeholder="Brief description of this option…"
+          placeholder="Brief description of this option..."
           rows={2}
         />
       </div>
@@ -272,10 +249,6 @@ function AlternativeCard({
   )
 }
 
-// ─────────────────────────────────────────────────────────────
-//  Step indicator
-// ─────────────────────────────────────────────────────────────
-
 function StepIndicator({ current, total }: { current: number; total: number }) {
   return (
     <div className="step-indicator" role="progressbar" aria-valuenow={current + 1} aria-valuemax={total}>
@@ -296,10 +269,6 @@ function StepIndicator({ current, total }: { current: number; total: number }) {
   )
 }
 
-// ─────────────────────────────────────────────────────────────
-//  Main component
-// ─────────────────────────────────────────────────────────────
-
 const INITIAL_STATE: FormState = {
   title: '',
   context: '',
@@ -311,14 +280,49 @@ const INITIAL_STATE: FormState = {
 }
 
 export function NewDecision() {
-  const navigate       = useNavigate()
-  const workspace      = useWorkspaceStore((s) => s.activeWorkspace)
-  const [step, setStep]     = useState(0)
-  const [form, setForm]     = useState<FormState>(INITIAL_STATE)
-  const [errors, setErrors] = useState<StepErrors>({})
-  const [submitting, setSubmitting] = useState(false)
+  const navigate = useNavigate()
+  const { workspaceId, decisionId } = useParams<{
+    workspaceId?: string
+    decisionId?: string
+  }>()
 
-  // ── Field helpers ─────────────────────────────────────────
+  const isEditMode = !!(workspaceId && decisionId)
+  const workspace  = useWorkspaceStore((s) => s.activeWorkspace)
+
+  const [step, setStep]                     = useState(0)
+  const [form, setForm]                     = useState<FormState>(INITIAL_STATE)
+  const [errors, setErrors]                 = useState<StepErrors>({})
+  const [submitting, setSubmitting]         = useState(false)
+  const [loadingDecision, setLoadingDecision] = useState(isEditMode)
+
+  useEffect(() => {
+    if (!isEditMode) return
+    setLoadingDecision(true)
+    getDecision(workspaceId!, decisionId!)
+      .then((d) => {
+        setForm({
+          title:        d.title,
+          context:      d.context ?? '',
+          tags:         d.tags ?? [],
+          rationale:    d.rationale ?? '',
+          stakeholders: d.stakeholders ?? [],
+          reviewDate:   d.review_date ? d.review_date.split('T')[0] : '',
+          alternatives: (d.alternatives ?? []).map((a) => ({
+            id:          a.id ?? uid(),
+            title:       a.title,
+            description: a.description ?? '',
+            pros:        a.pros ?? [],
+            cons:        a.cons ?? [],
+            isSelected:  a.is_selected ?? false,
+          })),
+        })
+      })
+      .catch(() => {
+        toast.error('Could not load decision')
+        navigate(-1)
+      })
+      .finally(() => setLoadingDecision(false))
+  }, [isEditMode, workspaceId, decisionId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function set<K extends keyof FormState>(key: K, val: FormState[K]) {
     setForm((f) => ({ ...f, [key]: val }))
@@ -338,10 +342,7 @@ export function NewDecision() {
 
   function removeAlt(index: number) {
     if (form.alternatives.length <= 1) return
-    setForm((f) => ({
-      ...f,
-      alternatives: f.alternatives.filter((_, i) => i !== index),
-    }))
+    setForm((f) => ({ ...f, alternatives: f.alternatives.filter((_, i) => i !== index) }))
   }
 
   function selectAlt(index: number) {
@@ -350,8 +351,6 @@ export function NewDecision() {
       alternatives: f.alternatives.map((a, i) => ({ ...a, isSelected: i === index })),
     }))
   }
-
-  // ── Validation ────────────────────────────────────────────
 
   function validateStep0(): boolean {
     const errs: StepErrors = {}
@@ -362,9 +361,7 @@ export function NewDecision() {
 
   function validateStep1(): boolean {
     const errs: StepErrors = {}
-    if (form.alternatives.length === 0) {
-      errs.alternatives = 'Add at least one alternative'
-    }
+    if (form.alternatives.length === 0) errs.alternatives = 'Add at least one alternative'
     form.alternatives.forEach((a, i) => {
       if (!a.title.trim()) errs[`alt_${i}`] = 'Alternative title is required'
     })
@@ -375,16 +372,9 @@ export function NewDecision() {
   function validateStep2(): boolean {
     const errs: StepErrors = {}
     if (!form.rationale.trim()) errs.rationale = 'Rationale is required'
-    if (form.reviewDate) {
-      const today = new Date(); today.setHours(0, 0, 0, 0)
-      if (new Date(form.reviewDate) <= today) {
-      }
-    }
     setErrors(errs)
     return Object.keys(errs).length === 0
   }
-
-  // ── Navigation ────────────────────────────────────────────
 
   function next() {
     const valid = step === 0 ? validateStep0() : step === 1 ? validateStep1() : true
@@ -396,71 +386,75 @@ export function NewDecision() {
     setStep((s) => s - 1)
   }
 
-  // ── Submit ────────────────────────────────────────────────
-
   async function handleSubmit() {
     if (!validateStep2()) return
-    if (!workspace) { toast.error('No active workspace'); return }
+    const wsId = workspaceId ?? workspace?.id
+    if (!wsId) { toast.error('No active workspace'); return }
 
-    const selectedAlt = form.alternatives.find((a) => a.isSelected)
+    const payload = {
+      title:        form.title.trim(),
+      context:      form.context.trim(),
+      rationale:    form.rationale.trim(),
+      tags:         form.tags,
+      stakeholders: form.stakeholders,
+      review_date:  form.reviewDate || null,
+      alternatives: form.alternatives.map((a) => ({
+        title:       a.title.trim(),
+        description: a.description.trim(),
+        pros:        a.pros,
+        cons:        a.cons,
+        is_selected: a.isSelected,
+      })),
+    }
 
     setSubmitting(true)
     try {
-      const created = await createDecision(workspace.id, {
-        title:      form.title.trim(),
-        context:    form.context.trim(),
-        rationale:  form.rationale.trim(),
-        tags:       form.tags,
-        stakeholders: form.stakeholders,
-        review_date:  form.reviewDate || null,
-        alternatives: form.alternatives.map((a) => ({
-          title:       a.title.trim(),
-          description: a.description.trim(),
-          pros:        a.pros,
-          cons:        a.cons,
-          is_selected: a.isSelected,
-        })),
-        // Pass selected alt title so backend can link it
-        ...(selectedAlt ? { selected_alternative: selectedAlt.id } : {}),
-      })
-
-      toast.success('Decision logged successfully!')
-      navigate(`/workspaces/${workspace.id}/decisions/${created.id}`)
+      if (isEditMode) {
+        await updateDecision(wsId, decisionId!, payload)
+        toast.success('Decision updated!')
+        navigate(`/workspaces/${wsId}/decisions/${decisionId}`)
+      } else {
+        const created = await createDecision(wsId, payload)
+        toast.success('Decision logged successfully!')
+        navigate(`/workspaces/${wsId}/decisions/${created.id}`)
+      }
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to create decision'
+      const msg = err instanceof Error ? err.message : isEditMode ? 'Failed to update decision' : 'Failed to create decision'
       toast.error(msg)
     } finally {
       setSubmitting(false)
     }
   }
 
-  // ── Today string for min date ─────────────────────────────
-
-  const tomorrow = new Date()
-  tomorrow.setDate(tomorrow.getDate() + 1)
-  const minDate = tomorrow.toISOString().split('T')[0]
-
-  // ─────────────────────────────────────────────────────────
-  //  Render
-  // ─────────────────────────────────────────────────────────
+  if (loadingDecision) {
+    return (
+      <div className="new-decision">
+        <div className="new-decision__header">
+          <h1 className="new-decision__title">Edit Decision</h1>
+        </div>
+        <div className="new-decision__card" style={{ textAlign: 'center', padding: '3rem' }}>
+          <span className="btn-spinner" style={{ display: 'inline-block' }} />
+          <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>Loading decision...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="new-decision">
-      {/* Page header */}
       <div className="new-decision__header">
-        <h1 className="new-decision__title">Log a Decision</h1>
+        <h1 className="new-decision__title">{isEditMode ? 'Edit Decision' : 'Log a Decision'}</h1>
         <p className="new-decision__subtitle">
-          Capture context, alternatives, and the rationale behind your choice.
+          {isEditMode
+            ? 'Update the details, alternatives, and rationale for this decision.'
+            : 'Capture context, alternatives, and the rationale behind your choice.'}
         </p>
       </div>
 
-      {/* Step indicator */}
       <StepIndicator current={step} total={3} />
 
-      {/* Form card */}
       <div className="new-decision__card">
 
-        {/* ── Step 0: The Decision ─────────────────────────── */}
         {step === 0 && (
           <div className="step-content" key="step0">
             <h2 className="step-content__heading">The Decision</h2>
@@ -491,7 +485,7 @@ export function NewDecision() {
                 className="form-textarea"
                 value={form.context}
                 onChange={(e) => set('context', e.target.value)}
-                placeholder="Describe the situation that required a decision…"
+                placeholder="Describe the situation that required a decision..."
                 rows={4}
               />
             </div>
@@ -505,13 +499,12 @@ export function NewDecision() {
                 id="nd-tags"
                 values={form.tags}
                 onChange={(v) => set('tags', v)}
-                placeholder="e.g. infrastructure, backend…"
+                placeholder="e.g. infrastructure, backend..."
               />
             </div>
           </div>
         )}
 
-        {/* ── Step 1: Alternatives ────────────────────────── */}
         {step === 1 && (
           <div className="step-content" key="step1">
             <h2 className="step-content__heading">Alternatives</h2>
@@ -538,19 +531,13 @@ export function NewDecision() {
               ))}
             </div>
 
-            <button
-              type="button"
-              className="btn-add-alt"
-              onClick={addAlt}
-              id="btn-add-alternative"
-            >
+            <button type="button" className="btn-add-alt" onClick={addAlt} id="btn-add-alternative">
               <Plus size={16} strokeWidth={2.5} />
               Add Alternative
             </button>
           </div>
         )}
 
-        {/* ── Step 2: Rationale + Stakeholders ────────────── */}
         {step === 2 && (
           <div className="step-content" key="step2">
             <h2 className="step-content__heading">Rationale & Stakeholders</h2>
@@ -558,7 +545,6 @@ export function NewDecision() {
               Record why the chosen alternative was selected and who was involved.
             </p>
 
-            {/* Chosen alternative preview */}
             {(() => {
               const chosen = form.alternatives.find((a) => a.isSelected)
               return chosen ? (
@@ -583,7 +569,7 @@ export function NewDecision() {
                 className={`form-textarea ${errors.rationale ? 'form-textarea--error' : ''}`}
                 value={form.rationale}
                 onChange={(e) => set('rationale', e.target.value)}
-                placeholder="Explain the reasoning behind this decision…"
+                placeholder="Explain the reasoning behind this decision..."
                 rows={5}
                 autoFocus
               />
@@ -599,7 +585,7 @@ export function NewDecision() {
                 id="nd-stakeholders"
                 values={form.stakeholders}
                 onChange={(v) => set('stakeholders', v)}
-                placeholder="e.g. Engineering, Product…"
+                placeholder="e.g. Engineering, Product..."
               />
             </div>
 
@@ -613,7 +599,6 @@ export function NewDecision() {
                 type="date"
                 className={`form-input form-input--date ${errors.reviewDate ? 'form-input--error' : ''}`}
                 value={form.reviewDate}
-                min={minDate}
                 onChange={(e) => set('reviewDate', e.target.value)}
               />
               {errors.reviewDate && <p className="form-error">{errors.reviewDate}</p>}
@@ -621,7 +606,6 @@ export function NewDecision() {
           </div>
         )}
 
-        {/* ── Navigation buttons ───────────────────────────── */}
         <div className="step-nav">
           {step > 0 ? (
             <button type="button" className="btn-back" onClick={back}>
@@ -648,10 +632,10 @@ export function NewDecision() {
               {submitting ? (
                 <span className="btn-loading">
                   <span className="btn-spinner" />
-                  Saving…
+                  {isEditMode ? 'Saving...' : 'Logging...'}
                 </span>
               ) : (
-                'Log Decision'
+                isEditMode ? 'Save Changes' : 'Log Decision'
               )}
             </button>
           )}
@@ -660,4 +644,3 @@ export function NewDecision() {
     </div>
   )
 }
-

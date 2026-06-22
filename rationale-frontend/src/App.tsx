@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+﻿import { Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { BrowserRouter } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
@@ -20,7 +20,7 @@ import { JoinWorkspace } from './pages/JoinWorkspace'
  * and renders the router tree after the initial session check resolves.
  */
 function AuthGate() {
-  useAuth() // subscribes to Supabase auth changes → syncs into authStore
+  useAuth() // subscribes to Supabase auth changes â†’ syncs into authStore
   const isLoading = useAuthStore((s) => s.isLoading)
 
   if (isLoading) {
@@ -33,19 +33,20 @@ function AuthGate() {
 
   return (
     <Routes>
-      {/* Public — redirect root to /login */}
+      {/* Public â€” redirect root to /login */}
       <Route path="/" element={<Navigate to="/login" replace />} />
       <Route path="/login"  element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/join"   element={<JoinWorkspace />} />
 
-      {/* Protected — requires active session, wrapped in AppShell */}
+      {/* Protected â€” requires active session, wrapped in AppShell */}
       <Route element={<ProtectedRoute />}>
         <Route element={<AppShell />}>
           <Route path="/dashboard"       element={<Dashboard />} />
           <Route path="/analytics" element={<ErrorBoundary><Analytics /></ErrorBoundary>} />
           <Route path="/settings"        element={<WorkspaceSettings />} />
-          <Route path="/decisions/new"                                       element={<NewDecision />} />
+          <Route path="/decisions/new"                                                    element={<NewDecision />} />
+          <Route path="/workspaces/:workspaceId/decisions/:decisionId/edit"               element={<NewDecision />} />
           <Route path="/workspaces/:workspaceId/decisions/:decisionId"        element={<DecisionDetail />} />
         </Route>
       </Route>
