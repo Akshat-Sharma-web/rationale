@@ -1,10 +1,8 @@
 ﻿import { useNavigate } from 'react-router-dom'
 import { Pencil } from 'lucide-react'
 import type { Decision } from '../../types'
-
 type DecisionStatus = Decision['status']
-
-const STATUS_META: Record
+const STATUS_META: Record<
   DecisionStatus,
   { label: string; className: string }
 > = {
