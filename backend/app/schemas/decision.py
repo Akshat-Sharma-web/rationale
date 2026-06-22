@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 from datetime import datetime
 from typing import Literal, Optional
@@ -9,7 +9,7 @@ from pydantic import BaseModel, field_validator
 DecisionStatus = Literal["draft", "active", "superseded", "archived", "reviewed"]
 
 
-# ── Alternatives ──────────────────────────────────────────────────────────────
+# â”€â”€ Alternatives â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class AlternativeCreate(BaseModel):
     title: str
@@ -36,11 +36,11 @@ class AlternativeResponse(BaseModel):
     is_selected: bool
 
 
-# ── Outcome Reviews ───────────────────────────────────────────────────────────
+# â”€â”€ Outcome Reviews â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class OutcomeReviewCreate(BaseModel):
     actual_outcome: str
-    quality_score: int  # 1–5
+    quality_score: int  # 1â€“5
     lessons_learned: Optional[str] = None
 
     @field_validator("quality_score")
@@ -68,7 +68,7 @@ class OutcomeReviewResponse(BaseModel):
     reviewed_by: str  # user_id of the reviewer
 
 
-# ── Created-by user info embedded in response ─────────────────────────────────
+# â”€â”€ Created-by user info embedded in response â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class CreatedByUser(BaseModel):
     id: str
@@ -76,7 +76,7 @@ class CreatedByUser(BaseModel):
     email: str
 
 
-# ── Decision request schemas ──────────────────────────────────────────────────
+# â”€â”€ Decision request schemas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class DecisionCreate(BaseModel):
     title: str
@@ -98,7 +98,7 @@ class DecisionCreate(BaseModel):
 
 
 class DecisionUpdate(BaseModel):
-    """All fields are optional — only provided fields are updated."""
+    """All fields are optional â€” only provided fields are updated."""
     title: Optional[str] = None
     context: Optional[str] = None
     selected_alternative: Optional[str] = None
@@ -106,10 +106,11 @@ class DecisionUpdate(BaseModel):
     status: Optional[DecisionStatus] = None
     tags: Optional[list[str]] = None
     stakeholders: Optional[list[str]] = None
+    alternatives: Optional[list[AlternativeCreate]] = None
     review_date: Optional[datetime] = None
 
 
-# ── Decision filter query params ──────────────────────────────────────────────
+# â”€â”€ Decision filter query params â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class DecisionFilters(BaseModel):
     status: Optional[DecisionStatus] = None
@@ -118,7 +119,7 @@ class DecisionFilters(BaseModel):
     keyword: Optional[str] = None  # searches title + context
 
 
-# ── Decision response schema ──────────────────────────────────────────────────
+# â”€â”€ Decision response schema â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class DecisionResponse(BaseModel):
     id: str

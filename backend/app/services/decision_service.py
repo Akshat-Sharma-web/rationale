@@ -1,12 +1,12 @@
-"""
-DecisionService — full Supabase implementation.
+﻿"""
+DecisionService â€” full Supabase implementation.
 Uses the service_role client (bypasses RLS); access is enforced manually.
 
 Role permission matrix:
-  viewer  → read only
-  member  → read + create + update own decisions
-  admin   → read + create + update any + delete
-  owner   → same as admin
+  viewer  â†’ read only
+  member  â†’ read + create + update own decisions
+  admin   â†’ read + create + update any + delete
+  owner   â†’ same as admin
 """
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ from app.schemas.decision import (
 )
 
 
-# ── Role helpers ──────────────────────────────────────────────────────────────
+# â”€â”€ Role helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 _WRITE_ROLES = {"owner", "admin", "member"}
 _ADMIN_ROLES = {"owner", "admin"}
@@ -75,7 +75,7 @@ def _require_admin(db: Client, *, workspace_id: str, user_id: str) -> str:
     return role
 
 
-# ── User info cache ───────────────────────────────────────────────────────────
+# â”€â”€ User info cache â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _fetch_user(db: Client, user_id: str) -> CreatedByUser:
     """Fetch a user's name and email from Supabase Auth admin API."""
@@ -100,7 +100,7 @@ def _fetch_users_bulk(db: Client, user_ids: list[str]) -> dict[str, CreatedByUse
     return result
 
 
-# ── Row mappers ───────────────────────────────────────────────────────────────
+# â”€â”€ Row mappers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 def _map_alternative(row: dict) -> AlternativeResponse:
     return AlternativeResponse(
@@ -150,7 +150,7 @@ def _map_decision(
     )
 
 
-# ── Service ───────────────────────────────────────────────────────────────────
+# â”€â”€ Service â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class DecisionService:
 
@@ -303,6 +303,7 @@ class DecisionService:
         return _map_decision(row, creator, alternatives, reviews)
 
     @staticmethod
+    @staticmethod
     def update_decision(
         db: Client,
         *,
@@ -313,13 +314,13 @@ class DecisionService:
     ) -> DecisionResponse:
         """
         Partial update.
-        - Viewers → 403
+        - Viewers -> 403
         - Members can only update their OWN decisions
         - Admins/owners can update any decision
+        - If alternatives are provided, existing ones are deleted and replaced.
         """
         role = _require_write(db, workspace_id=workspace_id, user_id=user_id)
 
-        # Fetch existing to check ownership for members
         existing_resp = (
             db.table("decisions")
             .select("created_by, workspace_id")
@@ -337,23 +338,46 @@ class DecisionService:
                 detail="Members can only edit their own decisions",
             )
 
-        updates = data.model_dump(exclude_none=True)
-        if not updates:
-            # Nothing to change — return current state
-            return DecisionService.get_decision(
-                db, decision_id=decision_id, workspace_id=workspace_id, user_id=user_id
-            )
+        alternatives_data = data.alternatives
+
+        updates = data.model_dump(exclude_none=True, exclude={"alternatives"})
 
         if "review_date" in updates and updates["review_date"]:
             updates["review_date"] = updates["review_date"].isoformat()
 
-        db.table("decisions").update(updates).eq("id", decision_id).execute()
+        if updates:
+            db.table("decisions").update(updates).eq("id", decision_id).execute()
+
+        if alternatives_data is not None:
+            db.table("alternatives").delete().eq("decision_id", decision_id).execute()
+
+            selected_alt_id: str | None = None
+
+            if alternatives_data:
+                alt_rows = [
+                    {
+                        "decision_id": decision_id,
+                        "title": alt.title,
+                        "description": alt.description,
+                        "pros": alt.pros,
+                        "cons": alt.cons,
+                        "is_selected": alt.is_selected,
+                    }
+                    for alt in alternatives_data
+                ]
+                alt_resp = db.table("alternatives").insert(alt_rows).execute()
+                for row in alt_resp.data:
+                    if row.get("is_selected"):
+                        selected_alt_id = row["id"]
+
+            db.table("decisions").update(
+                {"selected_alternative": selected_alt_id}
+            ).eq("id", decision_id).execute()
 
         return DecisionService.get_decision(
             db, decision_id=decision_id, workspace_id=workspace_id, user_id=user_id
         )
 
-    @staticmethod
     def delete_decision(
         db: Client,
         *,
