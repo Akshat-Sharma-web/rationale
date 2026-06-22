@@ -378,7 +378,6 @@ export function NewDecision() {
     if (form.reviewDate) {
       const today = new Date(); today.setHours(0, 0, 0, 0)
       if (new Date(form.reviewDate) <= today) {
-        errs.reviewDate = 'Review date must be in the future'
       }
     }
     setErrors(errs)
@@ -661,3 +660,4 @@ export function NewDecision() {
     </div>
   )
 }
+
